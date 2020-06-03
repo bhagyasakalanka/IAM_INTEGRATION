@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+</head>
+
+<body>
+
+    <script>
+        var socket;
+
+        function generateKey() {
+            var secToken = Math.round(Math.random() * 1000000);
+            document.getElementById("randomKey").innerHTML = secToken;
+            var xhttp = new XMLHttpRequest();
+            var params = "randomKey=" + secToken;
+
+            xhttp.open("POST", "http://localhost:9090/secureTokenAPI", true);
+            xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhttp.send(params);
+        }
+
+        $(document).ready(function () {
+            $('#button').click(function () {
+                var xhttp = new XMLHttpRequest();
+                var params = "command=cmd2&did=" + document.getElementById('msgLog').value + "&firstName=" + document.getElementById('firstName').value + "&lastName=" + document.getElementById('lastName').value
+                    + "&date=" + document.getElementById('datepicker').value;;
+                params += "&Access-Control-Allow-Origin=*";
+
+                // var parmsx = "command=cmd1&secureToken=392740&did=-----BEGIN PUBLIC KEY----- MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDn58q+jOPvfU4lXnm/ywVXajGh 9NBHC7c48AHNeddTrbgPBqiGut+TZeq5joanAONXk7jPi7n3NMb4H8XAumG048m1 Kzoi2QFIQ3qvwN5/kHUPiPN0mXsEeCT0fthP72unnDo40yp+tk935CBf75fdb5ES u6C1mbvkiV9S8OOnZwIDAQAB -----END PUBLIC KEY-----";
+                //parmsx += "&Access-Control-Allow-Origin=*";
+                xhttp.onreadystatechange = function () {
+                    if (this.readyState == 4 && this.status == 200) {
+                        console.log('====>AAA:' + xhttp.responseText);
+                        if (xhttp.responseText === 'done') {
+                            alert("Registration Completed");
+                        }
+                        socket.send(params);
+                    }
+                };
+                console.log("working???")
+                console.log(params)
+                xhttp.open("POST", "http://127.0.0.1:9090/api", true);
+                xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhttp.send(params);
+            });
+
+            if (!("WebSocket" in window)) {
+                $('#msgLogD, input, button, #examples').fadeOut("fast");
+                $('<p>Oh no, you need a browser that supports WebSockets. How about <a href="http://www.google.com/chrome">Google Chrome</a>?</p>').appendTo('#container');
+            } else {
+                connect();
+
+                function connect() {
+                    var host = "ws://127.0.0.1:9095/basic/ws";
+
+                    try {
+                        socket = new WebSocket(host);
+
+                        message('<p class="event">Socket Status: ' + socket.readyState);
+
+                        socket.onopen = function () {
+                            message('<p class="event">Socket Status: ' + socket.readyState + ' (open)');
+                            console.log("result1")
+                        }
+
+                        socket.onmessage = function (msg) {
+
+                            var res = msg.data.split("%2C");
+
+                            var result = "";
+                            for (var i = 0; i < res.length; i++) {
+                                if (i < res.length - 1) {
+                                    result += String.fromCharCode(parseInt(res[i], 2));
+                                }
+                            }
+
+                            message(result);
+                        }
+
+                        socket.onclose = function () {
+                            message('<p class="event">Socket Status: ' + socket.readyState + ' (Closed)');
+
+                        }
+                    } catch (exception) {
+                        message('<p>Error' + exception);
+                        console.log("error message")
+                    }
+
+                    function send() {
+                        try {
+                            socket.send('ping');
+                        } catch (exception) {
+                            console.log('Error: Pining');
+                        }
+                    }
+
+                    function message(msg) {
+                        msg = msg.replace(/\'/g, '"');
+                        console.log("msg: " + msg);
+                        $('#msgLogD').html(msg);
+                        $('#msgLog').val(msg);
+                    }
+
+                    $('#disconnect').click(function () {
+                        socket.close();
+                    });
+
+                }
+            }
+        });
+
+        $(function () {
+            $("#datepicker").datepicker();
+        });
+    </script>
+
+    <body>
+        <link rel="stylesheet" type="text/css" href="http://localhost:8080/govid-request.css">
+        <table border="0" width="600">
+            <tr>
+                <td><a href="http://localhost:9090/logout?uname=EMPTYUNAME" id="logout" download>Logout</a></td>
+            </tr>
+            <tr>
+                <td>
+                    <label id="firstNameLabel">First Name (*) :</label><br />
+                </td>
+            </tr>
+            <tr style="width: 100;">
+                <td style="width: 100;">
+                    <input type="text" id="firstName" name="firstName" style="width:100;" value="Alice"></input>
+                </td>
+            </tr>
+            <tr>
+                <td height="10"></td>
+            </tr>
+            <tr>
+                <td>
+                    <label id="lastNameLabel">Last Name (*) :</label>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="text" id="lastName" name="lastName" size=20 value="Davis"></input>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <p>Date: <input type="text" id="datepicker" /></p>
+                </td>
+            </tr>
+            <tr>
+                <td height="10"></td>
+            </tr>
+            
+            <tr>
+                <td><button type="button" id="priv" onclick="generateKey()">Generate random key</button></td>
+                <td>
+                    <p id="randomKey"></p>
+                </td>
+            </tr>
+            <tr>
+                <td> Decentralized Identifier (DID) </td>
+                <td>
+                    <p id="msgLogD" name="msgLogD" rows="4" cols="50"></p>
+                    <input type="text" id="msgLog" name="msgLog" size=20 hidden></input>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="button" id="button" value="Submit"></input>
+                </td>
+            </tr>
+        </table>
+        <p id="demo"></p>
+    </body>
+
+</html>

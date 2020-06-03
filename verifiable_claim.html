@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<script type="text/javascript">
+function load() {
+  var uname = "";
+  var xhttp = new XMLHttpRequest();
+  var params = "username=" + document.getElementById('username').value + "&pwd=" + document.getElementById('pwd').value; 
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      window.location.replace("http://localhost:9091/home/did?username=" + document.getElementById('username').value + "&page=DID");
+    }
+  };
+
+  xhttp.open("POST", "http://localhost:9091/authenticate", true);< !DOCTYPE html >
+    <html>
+      <head>
+        <script type="text/javascript">
+          function didFunction() {
+            window.location.replace("http://localhost:9091/home/did?username=EMPTYUNAME");
+      }
+
+      function vcFunction() {
+            window.location.replace("http://localhost:9091/home/vc?username=EMPTYUNAME&did=DIDMID");
+      }
+
+      function vcRequestFunction() {
+
+          }
+  </script>
+    
+    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+    <script src="http://localhost:8080/jsencrypt.js"></script>
+    <script src="http://localhost:8080/browser-aes.js"></script>
+    <script type="text/javascript">
+
+    function showVC(dt){
+      var w = 400;
+      var h = 600;
+      var left = (screen.width/2)-(w/2);
+      var top = (screen.height/2)-(h/2);
+
+
+      var xhttp = new XMLHttpRequest();
+      var vc = "";
+      var params = "command=cmd3&id=" + dt;
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          console.log("response :" + this.responseText);
+          if (this.responseText == "no-vc-for-this-did") {
+          vc = 'Verifiable credential data could not be found.';
+          } else {
+          vc = this.responseText;
+          }
+
+          var win = window.open('', 'Verifiable credential of did:ethr:' + dt, 'toolbar=no, title=\'Verifiable Credential\' location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width='+w+', height='+h+', top='+top+', left='+left);
+          var doc = win.document.open();
+        }
+
+        doc.write('<html><body>' + vc + '</body></html>');
+        doc.close();
+      };
+      xhttp.open("POST", "http://localhost:9091/api", true);
+      xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      xhttp.send(params);
+    }
+
+    function decryptRSA(encrypted) {
+       var decrypt = new JSEncrypt();
+       decrypt.setPrivateKey(document.getElementById('privkey').value);
+       var uncrypted = decrypt.decrypt(encrypted);
+
+       return uncrypted;
+    }
+
+    function send(encryptedval) {
+      var xhttp = new XMLHttpRequest();
+      var urlEncodedDataPairs = [];
+      console.log('encryptedval:' + encryptedval);
+      var params = "did=" + document.getElementById('didTxt').value + "&encryptedval=" + encryptedval + "&command=encresponse";
+
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          if (this.responseText != 'none') {
+          var res = this.responseText.split('|||');
+          var item = res[1];
+          var vcTxt = res[2];
+          var res2 = item.split(",");
+          var didmidVC = res2[0];
+          var didVC = res2[1];
+          var nameVC = res2[3];
+          var issuerVC = res2[2];
+
+          var xhttp = new XMLHttpRequest();
+          var params = "command=cmd2&did=" + didmidVC + "&didVC=" + didVC + "&issuerVC=" + issuerVC + "&nameVC=" + nameVC + "&vcTxt=" + vcTxt;
+          xhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+          console.log("response :" + this.responseText);
+              if (this.responseText == "vc-already-exist") {
+          alert('Verifiable credentials are already up to date.');
+              } else {
+          document.getElementById("vctable").innerHTML = this.responseText;
+              }
+            }
+          };
+          xhttp.open("POST", "http://localhost:9091/api", true);
+          xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+          xhttp.send(params);
+          } else {
+          alert('Could not find any verifiable credentials.');
+          }
+        }
+      };
+      xhttp.open("POST", "http://localhost:9090/api", true);
+      xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      xhttp.send(params);
+    }
+
+
+
+        $(document).ready(function() {
+
+          $("#submitRequest").click(function () {
+            $.post($('#issuerURL').val(),
+              {
+                command: 'requestvc',
+                did: $('#didTxt').val()
+              },
+              function (data, status) {
+                unencrypted = decryptRSA(data.trim());
+                if (!(typeof unencrypted === "boolean")) {
+                  send(unencrypted);
+                }
+              });
+          });
+        });
+    </script>
+    <script>
+        function startRead() {
+          var file = document.getElementById('file-input').files[0];
+
+          if(file){
+          out = getAsText(file);
+          }
+        }
+
+        function getAsText(readFile) {
+          var reader = new FileReader();
+          reader.readAsText(readFile, "UTF-8");
+
+          reader.onprogress = updateProgress;
+          reader.onload = loaded;
+          reader.onerror = errorHandler;
+        }
+
+        function updateProgress(evt) {
+
+        }
+
+        function loaded(evt) {
+          var fileString = evt.target.result;
+
+          document.getElementById('privkey').value = fileString;
+          console.log("privkey: " + document.getElementById('privkey').value);
+        }
+
+        function errorHandler(evt) {
+          if(evt.target.error.name == "NotReadableError") {
+          console.log("privkey: The file could not be read");
+          }
+        }
+    </script>
+    </head>
+    
+    <body bgcolor="lightblue">
+      <table border="0" width="600">
+        <tr>
+          <td>
+            <table>
+              <tr>
+                <td>
+                  <a href="javascript:void(0);" id="logout" onclick="didFunction();">DID</a>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  &nbsp;
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <a href="javascript:void(0);" id="logout" onclick="vcFunction();">VC</a>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  &nbsp;
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <a href="http://localhost:9091/logout?username=EMPTYUNAME" id="logout" download>Logout</a>
+                </td>
+              </tr>
+        </tr>
+      </table>
+      </td>
+      <td>
+        <table>
+          <tr>
+          <tr>
+            <td>
+              <table>
+                <tr>
+                  <td> Your Credentials Repository : </td>
+                  <td>https://localhost:9091/vc/</td>
+                  <input type="text" id="didTxt" name="didTxt" hidden value="DIDTXTVAL"></input>
+                </tr>
+              </table>
+          </tr>
+          <tr>
+            <td>
+              <h3>Your List of Verifiable Credentials </h3>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div id="vctable">
+                VCTABLE
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <table>
+                <tr>
+                  <td>Issuer URL : </td>
+                  <td><input type="text" id="issuerURL" name="issuerURL" size=20 value="http://localhost:9090/api"></input>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Your private key file : </td>
+                  <td><input type="file" id="file-input" name="file-input" size=20 onchange="startRead()"></input></td>
+                  <td>&nbsp;</td>
+                  <input type="text" id="privkey" name="privkey" style="display:none">
+                </tr>
+                <tr>
+                  <td><input type="button" id="submitRequest" value="Request"></input></td>
+                  <td>&nbsp;</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+      </tr>
+      </table>
+    </body>
+    
+    </html>
+
+  xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  xhttp.send(params);
+};
+</script>
+
+</head>
+<body>
+
+<h2>Verifiable Claim</h2>
+<body bgcolor="lightblue">
+<table>
+<tr>
+<td>
+  <label for="usernameLabel">User Name:</label><br/>
+<!--<input type="text" id="username" name="username" style="display:none">-->
+</td>
+<td>
+  <input type="text" id="username" name="username">
+</td>
+</tr>
+<tr>
+<td height="10"></td>
+</tr>
+<tr>
+<td>
+  <label for="privkey">Password:</label>
+</td>
+<td>
+<input type="password" id="pwd" name="pwd">
+</td>
+</tr>
+<tr>
+<td height="10"></td>
+</tr>
+<tr>
+<td>
+<input type="button" value="Submit" onclick="load()">
+</td>
+</tr>
+</table>
+<p id="demo"></p>
+</body>
+</html>
